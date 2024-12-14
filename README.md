@@ -2,8 +2,6 @@
 
 CSVUE is an interactive tool designed for quickly visualizing CSV data and other data types, such as Excel files (`.xlsx`, `.xls`), JSON files, and Parquet files.
 
-![Screenshot from 2024-12-14 16-17-33](https://github.com/user-attachments/assets/e2a15995-8a71-4ed3-ad57-3f85ff33ab88)
-
 ---
 
 ## **Features**
@@ -31,5 +29,7 @@ CSVUE is an interactive tool designed for quickly visualizing CSV data and other
 
 - **Save Plots**:
   - Export your visualizations as image files (`.png`, `.jpg`, or `.pdf`).
+ 
+![Screenshot from 2024-12-14 16-17-33](https://github.com/user-attachments/assets/e2a15995-8a71-4ed3-ad57-3f85ff33ab88)
 
 ---
