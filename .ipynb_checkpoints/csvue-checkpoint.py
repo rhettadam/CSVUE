@@ -205,12 +205,18 @@ class DataPlotterApp:
             messagebox.showerror("Error", f"Failed to plot data: {e}")
 
     def display_plot(self, fig):
+    # Clear the plot frame
         for widget in self.plot_frame.winfo_children():
             widget.destroy()
 
+        # Save the current figure for later use (e.g., saving)
+        self.current_fig = fig
+
+        # Display the figure in the plot frame
         canvas = FigureCanvasTkAgg(fig, master=self.plot_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
 
     def save_plot(self):
         if not hasattr(self, "current_fig") or self.current_fig is None:
@@ -228,6 +234,7 @@ class DataPlotterApp:
             messagebox.showinfo("Success", "Plot saved successfully!")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save plot: {e}")
+
 
 
 if __name__ == "__main__":
