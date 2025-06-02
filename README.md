@@ -1,121 +1,82 @@
-# CSVUE - Advanced Data Visualization Tool
+![logo](https://github.com/user-attachments/assets/73a6a479-da06-4fe9-be14-0aadfd91a331)
 
-CSVUE is a powerful and user-friendly data visualization tool that supports a wide range of file formats and creates interactive plots. It provides an intuitive interface for exploring and visualizing your data with various plot types and customization options.
+CSVUE is a desktop application built with Python and Tkinter for loading, browsing, analyzing, and visualizing tabular data from various file formats. CSVUE streamlines exploratory data analysis (EDA) with an intuitive GUI and rich plotting capabilities.
 
-## Features
+# Key Features
 
-- **Multiple File Format Support**: CSV, Excel (xlsx/xls), JSON, Parquet
-- **Interactive Plots**: Using Plotly for dynamic, interactive visualizations
-- **Wide Range of Plot Types**:
-  - Histogram
-  - Scatterplot
-  - Bar Plot
-  - Line Plot
-  - Box Plot
-  - Violin Plot
-  - Heatmap
-  - 3D Scatter
-  - Bubble Plot
-  - Time Series
-  - And more!
-- **Advanced Customization**:
-  - Color schemes
-  - Plot themes
-  - Custom labels and titles
-  - Interactive legends
-- **Data Preview**: Built-in data table viewer with search functionality
-- **Statistical Summary**: Quick access to basic statistics and data information
-- **Export Options**: Save plots as images or interactive HTML files
+## Multi-Format Data Loading
+- Supported formats: **.csv, .xlsx/.xls, .json, .parquet**
 
-## Installation
+- Files can be loaded and managed concurrently in a sidebar tree view
 
-1. Clone this repository or download the source code
-2. Create a virtual environment (recommended):
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-3. Install the required packages:
-   ```bash
-   pip install -r requirements.txt
-   ```
+- Each dataset is parsed into a Pandas DataFrame for in-memory operations
 
-## Usage
+## Data Structure Browser
+- Sidebar tree structure to navigate loaded datasets and their columns
 
-1. Run the application:
-   ```bash
-   python csvue.py
-   ```
+- Instant switching between datasets for focused analysis
 
-2. Load your data:
-   - Click the "Browse" button to select your data file
-   - Supported formats: CSV, Excel (xlsx/xls), JSON, Parquet
+## Data Browser Tab
+### Interactive tabular view using pandastable with support for:
 
-3. Create visualizations:
-   - Select a plot type from the dropdown menu
-   - Choose variables for X and Y axes (when applicable)
-   - Add color and size variables for additional dimensions
-   - Customize the plot using available options
-   - Click "Plot" to generate the visualization
+- Sorting
 
-4. Customize your plots:
-   - Select different color schemes
-   - Choose plot themes
-   - Add custom titles and labels
-   - Interact with the plot using Plotly's built-in tools
+- Filtering by custom criteria
 
-5. Export your work:
-   - Save plots as PNG/JPG/PDF files
-   - Export as interactive HTML files
-   - Generate statistical summaries
+- Searching across all columns
 
-## Tips for Best Results
+- Exporting data to various formats
 
-- Use appropriate plot types for your data:
-  - Categorical vs Numerical data
-  - Time series data
-  - Distributions
-- Experiment with different color schemes and themes
-- Use the data preview tab to understand your data structure
-- Check the statistics tab for quick insights
+- Quick actions like removing duplicates or handling missing values
 
-## Requirements
+![image](https://github.com/user-attachments/assets/1dea175e-3a2d-415a-99d7-a71debd9839b)
 
-- Python 3.7+
-- See requirements.txt for full list of dependencies
+## Advanced Visualization Engine
+### Supports rich interactive plots via Plotly, including:
 
-## Contributing
+- Histogram, Scatterplot, Bar, Line, Box, Violin, Heatmap
 
-Feel free to submit issues, fork the repository, and create pull requests for any improvements.
+- 3D Scatter, Bubble, Pie, Donut, Sunburst, Treemap
 
----
+- Time Series, Parallel Coordinates, Radar, Area, KDE, Density
 
-## **Features**
+### Fully configurable plot options:
 
-- **Supported File Types**:
-  - CSV
-  - Excel (`.xlsx`, `.xls`)
-  - JSON
-  - Parquet
+- X, Y, color, and size variables
 
-- **Plot Types**:
-  - Histogram
-  - Scatterplot
-  - Bar Plot
-  - Line Plot
-  - Box Plot
-  - Pie Chart
+- Themes (plotly, ggplot2, etc.) and color schemes (viridis, cividis, etc.)
 
-- **Dynamic Data Handling**:
-  - Automatically detects categorical and continuous variables from your dataset.
-  - Adjusts variable selection options based on the chosen plot type.
+- Real-time rendering and exporting of plots as PNG, SVG, PDF, or HTML
 
-- **Customizable Plot Labels**:
-  - Add titles, X-axis labels, and Y-axis labels for better clarity.
+- Embedded webview to render interactive Plotly plots directly in-app
 
-- **Save Plots**:
-  - Export your visualizations as image files (`.png`, `.jpg`, or `.pdf`).
- 
-![Screenshot from 2024-12-14 16-17-33](https://github.com/user-attachments/assets/e2a15995-8a71-4ed3-ad57-3f85ff33ab88)
+![image](https://github.com/user-attachments/assets/2155bbed-d818-4f95-94af-c33639c1645b)
 
----
+## Statistics Tab
+Four sub-tabs for comprehensive analysis:
+
+- Overview: Dataset metadata (row count, memory usage, column types)
+
+- Detailed Statistics: Descriptive stats for numerical and categorical columns
+
+- Data Quality: Missing values, duplicate rows, constant columns, high correlations
+
+- Distributions: Interactive Matplotlib plots (Histogram, Box, Violin, KDE)
+
+- Export capability to generate full HTML or plain-text reports
+
+![image](https://github.com/user-attachments/assets/1ef3b9f5-227a-4a27-a965-884e9472e6f7)
+
+## Data Operations & Utilities
+Quick Insights: Auto-generates descriptive summaries and correlations
+
+Missing Data Handler: Options for filling with mean/median/mode, forward/backward fill, or drop
+
+Duplicate Remover: Intelligent deduplication with column selection and keep-first/last logic
+
+Data Type Converter: Bulk convert column types (e.g., string → datetime)
+
+Dynamic Filtering: Build row filters with a GUI (e.g., col > 100 or col contains "abc")
+
+
+
