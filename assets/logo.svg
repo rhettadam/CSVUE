@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="41.38229mm"
+   height="42.077282mm"
+   viewBox="0 0 41.38229 42.077282"
+   version="1.1"
+   id="svg1"
+   inkscape:export-filename="logo.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-42.098551,-12.011826)">
+    <rect
+       style="fill:#ff8600;fill-opacity:1;stroke-width:1.72614;stroke-linecap:round;stroke-linejoin:round"
+       id="rect1"
+       width="40.462509"
+       height="38.546745"
+       x="43.997974"
+       y="6.7380328"
+       rx="4.2318325"
+       ry="4.9696097"
+       transform="matrix(0.9939401,0.10992308,-0.04037887,0.99918444,0,0)" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:13.2144px;line-height:1.2;font-family:'The Bold Font';-inkscape-font-specification:'The Bold Font Bold';text-align:center;letter-spacing:-0.0880957px;text-anchor:middle;fill:#fffffe;fill-opacity:1;stroke-width:0.391645;stroke-linecap:round;stroke-linejoin:round"
+       x="64.734146"
+       y="39.204605"
+       id="text1"
+       transform="matrix(0.95436941,-0.04468801,0.04077708,1.0459029,0,0)"><tspan
+         sodipodi:role="line"
+         id="tspan1"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:'The Bold Font';-inkscape-font-specification:'The Bold Font Bold';fill:#fffffe;fill-opacity:1;stroke-width:0.391645"
+         x="64.690094"
+         y="39.204605">CSVUE</tspan></text>
+  </g>
+</svg>
