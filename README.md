@@ -5,7 +5,19 @@ CSVUE is a desktop application built with Python and Tkinter for loading, browsi
 # Key Features
 
 ## Multi-Format Data Loading
-- Supported formats: **.csv, .xlsx/.xls, .json, .parquet**
+- Supported formats:
+  - Tabular Data: **.csv, .tsv**
+  - Spreadsheets: **.xlsx, .xls, .xlsm**
+  - Data Exchange: **.json, .jsonl, .xml**
+  - Big Data: **.parquet, .feather, .arrow**
+  - Databases: **.sqlite, .db, .sqlite3**
+  - Scientific: **.hdf, .h5**
+  - Statistical Software:
+    - R: **.rds**
+    - SAS: **.sas7bdat**
+    - SPSS: **.sav**
+    - Stata: **.dta**
+  - Python: **.pickle, .pkl**
 
 - Files can be loaded and managed concurrently in a sidebar tree view
 
@@ -31,7 +43,7 @@ CSVUE is a desktop application built with Python and Tkinter for loading, browsi
 
 ![image](https://github.com/user-attachments/assets/1dea175e-3a2d-415a-99d7-a71debd9839b)
 
-## Advanced Visualization Engine
+## Visualization Engine
 ### Supports rich interactive plots via Plotly, including:
 
 - Histogram, Scatterplot, Bar, Line, Box, Violin, Heatmap
@@ -46,14 +58,14 @@ CSVUE is a desktop application built with Python and Tkinter for loading, browsi
 
 - Themes (plotly, ggplot2, etc.) and color schemes (viridis, cividis, etc.)
 
-- Real-time rendering and exporting of plots as PNG, SVG, PDF, or HTML
+- Rendering and exporting of plots as PNG, SVG, PDF, or HTML
 
 - Embedded webview to render interactive Plotly plots directly in-app
 
 ![image](https://github.com/user-attachments/assets/2155bbed-d818-4f95-94af-c33639c1645b)
 
 ## Statistics Tab
-Four sub-tabs for comprehensive analysis:
+Four sub-tabs for analysis:
 
 - Overview: Dataset metadata (row count, memory usage, column types)
 

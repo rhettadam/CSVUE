@@ -20,4 +20,5 @@ dependencies:
   - pip:
     - ttkbootstrap>=1.10.1
     - pywebview>=5.0.2
-    - pandastable>=0.13.1 
+    - pandastable>=0.13.1
+    - pyreadr>=0.4.9 
