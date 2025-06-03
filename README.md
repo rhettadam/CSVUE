@@ -41,7 +41,7 @@ CSVUE is a desktop application built with Python and Tkinter for loading, browsi
 
 - Quick actions like removing duplicates or handling missing values
 
-![image](https://github.com/user-attachments/assets/1dea175e-3a2d-415a-99d7-a71debd9839b)
+![image](https://github.com/user-attachments/assets/522dd4a1-856e-4cc8-9a94-fe688647096d)
 
 ## Visualization Engine
 ### Supports rich interactive plots via Plotly, including:
