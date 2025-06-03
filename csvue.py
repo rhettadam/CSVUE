@@ -20,6 +20,7 @@ from scipy.interpolate import griddata
 import psutil
 import threading
 import pyreadr
+from scipy.stats import gaussian_kde
 
 class SQLiteManager:
     def __init__(self):
@@ -477,10 +478,48 @@ class DataPlotterApp:
                 selector["state"] = "readonly"
 
         elif plot_type == "Heatmap":
-            self.x_var["values"] = all_columns
-            self.y_var["values"] = all_columns
-            for selector in [self.x_var, self.y_var]:
+            self.x_var["values"] = ["None"] + all_columns
+            self.y_var["values"] = ["None"] + all_columns
+            self.color_var["values"] = ["None"] + self.continuous_columns
+            for selector in [self.x_var, self.y_var, self.color_var]:
                 selector["state"] = "readonly"
+            
+            # Add heatmap specific options
+            heatmap_opts = ttk.Frame(self.plot_specific_frame)
+            heatmap_opts.pack(fill=tk.X, pady=5)
+            
+            # Annotations
+            self.plot_specific_options['annot'] = tk.BooleanVar(value=True)
+            ttk.Checkbutton(heatmap_opts, text="Show Values", 
+                          variable=self.plot_specific_options['annot']).pack(side=tk.LEFT, padx=5)
+            
+            # Format string for annotations
+            ttk.Label(heatmap_opts, text="Format:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['fmt'] = ttk.Entry(heatmap_opts, width=8)
+            self.plot_specific_options['fmt'].insert(0, '.2g')
+            self.plot_specific_options['fmt'].pack(side=tk.LEFT, padx=5)
+            
+            # Center value
+            ttk.Label(heatmap_opts, text="Center:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['center'] = ttk.Entry(heatmap_opts, width=8)
+            self.plot_specific_options['center'].pack(side=tk.LEFT, padx=5)
+            
+            # Square cells
+            self.plot_specific_options['square'] = tk.BooleanVar(value=True)
+            ttk.Checkbutton(heatmap_opts, text="Square Cells", 
+                          variable=self.plot_specific_options['square']).pack(side=tk.LEFT, padx=5)
+            
+            # Line widths
+            ttk.Label(heatmap_opts, text="Line Width:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['linewidths'] = ttk.Spinbox(
+                heatmap_opts, from_=0, to=2, increment=0.1, width=5)
+            self.plot_specific_options['linewidths'].set(0.5)
+            self.plot_specific_options['linewidths'].pack(side=tk.LEFT, padx=5)
+            
+            # Robust scaling
+            self.plot_specific_options['robust'] = tk.BooleanVar(value=False)
+            ttk.Checkbutton(heatmap_opts, text="Robust Scaling", 
+                          variable=self.plot_specific_options['robust']).pack(side=tk.LEFT, padx=5)
 
         elif plot_type in ["Box Plot", "Violin Plot"]:
             self.x_var["values"] = self.categorical_columns
@@ -488,6 +527,85 @@ class DataPlotterApp:
             self.color_var["values"] = self.categorical_columns
             for selector in [self.x_var, self.y_var, self.color_var]:
                 selector["state"] = "readonly"
+
+        elif plot_type == "Pie Chart":
+            self.x_var["values"] = ["None"] + self.continuous_columns
+            self.x_var["state"] = "readonly"
+            self.color_var["values"] = ["None"] + self.categorical_columns
+            self.color_var["state"] = "readonly"
+            self.y_var["state"] = "disabled"
+            
+            # Add pie chart specific options
+            pie_opts = ttk.Frame(self.plot_specific_frame)
+            pie_opts.pack(fill=tk.X, pady=5)
+            
+            # Explode
+            ttk.Label(pie_opts, text="Explode:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['explode'] = ttk.Entry(pie_opts, width=15)
+            self.plot_specific_options['explode'].insert(0, "0.0")
+            self.plot_specific_options['explode'].pack(side=tk.LEFT, padx=5)
+            ttk.Label(pie_opts, text="(comma-separated values)").pack(side=tk.LEFT)
+            
+            # Start angle
+            ttk.Label(pie_opts, text="Start Angle:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['startangle'] = ttk.Spinbox(
+                pie_opts, from_=0, to=360, increment=45, width=5)
+            self.plot_specific_options['startangle'].set(0)
+            self.plot_specific_options['startangle'].pack(side=tk.LEFT, padx=5)
+            
+            # Shadow
+            self.plot_specific_options['shadow'] = tk.BooleanVar(value=False)
+            ttk.Checkbutton(pie_opts, text="Shadow", 
+                          variable=self.plot_specific_options['shadow']).pack(side=tk.LEFT, padx=5)
+            
+            # Auto percent
+            self.plot_specific_options['autopct'] = tk.BooleanVar(value=True)
+            ttk.Checkbutton(pie_opts, text="Show Percentages", 
+                          variable=self.plot_specific_options['autopct']).pack(side=tk.LEFT, padx=5)
+            
+            # Radius
+            ttk.Label(pie_opts, text="Radius:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['radius'] = ttk.Spinbox(
+                pie_opts, from_=0.1, to=2.0, increment=0.1, width=5)
+            self.plot_specific_options['radius'].set(1.0)
+            self.plot_specific_options['radius'].pack(side=tk.LEFT, padx=5)
+
+        elif plot_type == "Density Plot":
+            self.x_var["values"] = ["None"] + self.continuous_columns
+            self.x_var["state"] = "readonly"
+            self.color_var["values"] = ["None"] + self.categorical_columns
+            self.color_var["state"] = "readonly"
+            self.y_var["state"] = "disabled"
+            
+            # Add density plot specific options
+            density_opts = ttk.Frame(self.plot_specific_frame)
+            density_opts.pack(fill=tk.X, pady=5)
+            
+            # Bandwidth adjustment
+            ttk.Label(density_opts, text="Bandwidth Factor:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['bw_factor'] = ttk.Spinbox(
+                density_opts, from_=0.1, to=2.0, increment=0.05, width=5)
+            self.plot_specific_options['bw_factor'].set(0.25)
+            self.plot_specific_options['bw_factor'].pack(side=tk.LEFT, padx=5)
+            
+            # Fill
+            self.plot_specific_options['fill'] = tk.BooleanVar(value=True)
+            ttk.Checkbutton(density_opts, text="Fill", 
+                          variable=self.plot_specific_options['fill']).pack(side=tk.LEFT, padx=5)
+            
+            # Alpha (transparency)
+            ttk.Label(density_opts, text="Transparency:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['alpha'] = ttk.Spinbox(
+                density_opts, from_=0.0, to=1.0, increment=0.1, width=5)
+            self.plot_specific_options['alpha'].set(0.4)
+            self.plot_specific_options['alpha'].pack(side=tk.LEFT, padx=5)
+            
+            # Number of points
+            ttk.Label(density_opts, text="Points:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['points'] = ttk.Spinbox(
+                density_opts, from_=50, to=500, increment=50, width=5)
+            self.plot_specific_options['points'].set(200)
+            self.plot_specific_options['points'].pack(side=tk.LEFT, padx=5)
 
     def generate_summary(self):
         if self.data is None:
@@ -714,178 +832,482 @@ class DataPlotterApp:
             return
             
         if self.filtered_data is None:
-            self.filtered_data = self.data.copy()  # Initialize if not already done
+            self.filtered_data = self.data.copy()
 
-        plot_type = self.plot_type.get()
-        x_var = self.x_var.get()
-        y_var = self.y_var.get()
-        color_var = self.color_var.get()
-        
         try:
+            plot_type = self.plot_type.get()
+            x_var = self.x_var.get()
+            y_var = self.y_var.get()
+            color_var = self.color_var.get()
+            
+            # Handle None values in variable selections
+            if x_var == "None": x_var = None
+            if y_var == "None": y_var = None
+            if color_var == "None": color_var = None
+            
+            # Safely initialize plot_opts from plot_specific_options
+            plot_opts = {}
+            if hasattr(self, 'plot_specific_options'):
+                for key, var in self.plot_specific_options.items():
+                    try:
+                        if isinstance(var, (tk.BooleanVar, tk.StringVar, tk.IntVar, tk.DoubleVar)):
+                            plot_opts[key] = var.get()
+                        elif hasattr(var, 'get') and hasattr(var, 'winfo_exists'):
+                            # For Tkinter widgets, check if they still exist
+                            if var.winfo_exists():
+                                plot_opts[key] = var.get()
+                            else:
+                                plot_opts[key] = None
+                        else:
+                            plot_opts[key] = var
+                    except (tk.TclError, AttributeError, ValueError):
+                        # If any error occurs while getting the value, skip it
+                        plot_opts[key] = None
+            
+            # Validate required variables based on plot type
+            if plot_type in ["Scatter Plot", "Line Plot"] and not (x_var and y_var):
+                messagebox.showerror("Error", "Please select both X and Y variables!")
+                return
+            elif plot_type in ["Bar Plot", "Box Plot", "Violin Plot"] and not (x_var and y_var):
+                messagebox.showerror("Error", "Please select both X and Y variables!")
+                return
+            elif plot_type == "Histogram" and not x_var:
+                messagebox.showerror("Error", "Please select X variable!")
+                return
+
             # Clear previous plot
             self.fig.clear()
             
-            # Set the style
-            plt.style.use(self.plot_style.get())
+            # Get style settings
+            try:
+                plt.style.use(self.plot_style.get())
+            except:
+                plt.style.use('default')
             
-            # Apply font settings
-            plt.rcParams['font.family'] = self.font_family.get()
-            plt.rcParams['font.size'] = int(self.font_size.get())
+            # Apply font settings safely
+            try:
+                plt.rcParams['font.family'] = self.font_family.get()
+                plt.rcParams['font.size'] = int(self.font_size.get())
+            except:
+                plt.rcParams['font.family'] = 'Arial'
+                plt.rcParams['font.size'] = 12
             
-            # Create subplot (3D if needed)
-            if plot_type in ["3D Surface", "Vector Field"]:
-                ax = self.fig.add_subplot(111, projection='3d')
-                if hasattr(self, 'elevation') and hasattr(self, 'azimuth'):
-                    ax.view_init(elev=self.elevation.get(), azim=self.azimuth.get())
+            # Create subplot
+            ax = self.fig.add_subplot(111)
+            
+            # Generate automatic labels and title if not manually set
+            if not self.x_label.get() and x_var:
+                ax.set_xlabel(x_var)
             else:
-                ax = self.fig.add_subplot(111)
+                ax.set_xlabel(self.x_label.get())
+                
+            if not self.y_label.get() and y_var:
+                ax.set_ylabel(y_var)
+            else:
+                ax.set_ylabel(self.y_label.get())
             
-            # Apply grid and spine settings
-            ax.grid(self.show_grid.get())
-            if not self.show_spines.get():
-                for spine in ax.spines.values():
-                    spine.set_visible(False)
+            # Generate automatic title if not manually set
+            if not self.plot_title.get():
+                if plot_type == "Scatter Plot":
+                    title = f"Scatter Plot of {y_var} vs {x_var}"
+                    if color_var:
+                        title += f" (colored by {color_var})"
+                elif plot_type == "Line Plot":
+                    title = f"Line Plot of {y_var} vs {x_var}"
+                    if color_var:
+                        title += f" (grouped by {color_var})"
+                elif plot_type == "Bar Plot":
+                    title = f"Bar Plot of {y_var} by {x_var}"
+                    if color_var:
+                        title += f" (grouped by {color_var})"
+                elif plot_type == "Histogram":
+                    title = f"Histogram of {x_var}"
+                    if color_var:
+                        title += f" (grouped by {color_var})"
+                elif plot_type in ["Box Plot", "Violin Plot"]:
+                    title = f"{plot_type} of {y_var} by {x_var}"
+                    if color_var:
+                        title += f" (grouped by {color_var})"
+                elif plot_type == "Heatmap":
+                    title = f"Heatmap of {y_var} vs {x_var}"
+                    if color_var:
+                        title += f" (values: {color_var})"
+                else:
+                    # Default title for any other plot type
+                    title = f"{plot_type}"
+                    if x_var and y_var:
+                        title += f" of {y_var} vs {x_var}"
+                    elif x_var:
+                        title += f" of {x_var}"
+                    if color_var:
+                        title += f" (grouped by {color_var})"
+                ax.set_title(title, pad=float(self.title_pad.get()))
+            else:
+                ax.set_title(self.plot_title.get(), pad=float(self.title_pad.get()))
             
-            # Use filtered_data instead of data for all plotting
-            if plot_type == "3D Surface":
-                X, Y = np.meshgrid(
-                    np.linspace(self.filtered_data[x_var].min(), self.filtered_data[x_var].max(), 100),
-                    np.linspace(self.filtered_data[y_var].min(), self.filtered_data[y_var].max(), 100)
-                )
-                Z = griddata(
-                    (self.filtered_data[x_var], self.filtered_data[y_var]),
-                    self.filtered_data[color_var],
-                    (X, Y),
-                    method='cubic'
-                )
-                surf = ax.plot_surface(X, Y, Z, cmap=self.color_scheme.get())
-                self.fig.colorbar(surf)
-                
-            elif plot_type == "Contour Plot":
-                X, Y = np.meshgrid(
-                    np.linspace(self.filtered_data[x_var].min(), self.filtered_data[x_var].max(), 100),
-                    np.linspace(self.filtered_data[y_var].min(), self.filtered_data[y_var].max(), 100)
-                )
-                Z = griddata(
-                    (self.filtered_data[x_var], self.filtered_data[y_var]),
-                    self.filtered_data[color_var],
-                    (X, Y),
-                    method='cubic'
-                )
-                contour = ax.contourf(X, Y, Z, cmap=self.color_scheme.get())
-                self.fig.colorbar(contour)
-                
-            elif plot_type == "Stream Plot":
-                ax.streamplot(
-                    self.filtered_data[x_var], self.filtered_data[y_var],
-                    self.filtered_data[color_var], self.filtered_data.get(self.size_var.get(), None),
-                    color=self.color_scheme.get()
-                )
-                
-            elif plot_type == "Bubble Plot":
-                scatter = ax.scatter(
-                    self.filtered_data[x_var], self.filtered_data[y_var],
-                    s=self.filtered_data[color_var]*100,  # Size
-                    c=self.filtered_data.get(self.size_var.get(), None),  # Color
-                    cmap=self.color_scheme.get(),
-                    alpha=0.6
-                )
-                self.fig.colorbar(scatter)
-                
-            elif plot_type == "Step Plot":
-                ax.step(self.filtered_data[x_var], self.filtered_data[y_var],
-                       where='post', color=plt.cm.get_cmap(self.color_scheme.get())(0.6))
-                
-            elif plot_type == "Radar Chart":
-                values = self.filtered_data[y_var].values
-                categories = self.filtered_data[x_var].values
-                angles = np.linspace(0, 2*np.pi, len(categories), endpoint=False)
-                values = np.concatenate((values, [values[0]]))
-                angles = np.concatenate((angles, [angles[0]]))
-                ax.plot(angles, values)
-                ax.fill(angles, values, alpha=0.25)
-                ax.set_xticks(angles[:-1])
-                ax.set_xticklabels(categories)
-                
-            elif plot_type == "Line Plot":
+            # Apply axis limits
+            if self.x_min.get() and self.x_max.get():
+                try:
+                    ax.set_xlim(float(self.x_min.get()), float(self.x_max.get()))
+                except ValueError:
+                    pass
+            if self.y_min.get() and self.y_max.get():
+                try:
+                    ax.set_ylim(float(self.y_min.get()), float(self.y_max.get()))
+                except ValueError:
+                    pass
+            
+            # Apply tick locators
+            from matplotlib import ticker
+            if self.x_locator.get() != "Auto":
+                if self.x_locator.get() == "MultipleLocator":
+                    ax.xaxis.set_major_locator(ticker.MultipleLocator(0.5))
+                elif self.x_locator.get() == "FixedLocator":
+                    ax.xaxis.set_major_locator(ticker.FixedLocator([0, 1, 5]))
+                elif self.x_locator.get() == "LinearLocator":
+                    ax.xaxis.set_major_locator(ticker.LinearLocator(numticks=5))
+                elif self.x_locator.get() == "LogLocator":
+                    ax.xaxis.set_major_locator(ticker.LogLocator(base=10))
+                elif self.x_locator.get() == "MaxNLocator":
+                    ax.xaxis.set_major_locator(ticker.MaxNLocator(n=5))
+                elif self.x_locator.get() == "NullLocator":
+                    ax.xaxis.set_major_locator(ticker.NullLocator())
+            
+            if self.y_locator.get() != "Auto":
+                if self.y_locator.get() == "MultipleLocator":
+                    ax.yaxis.set_major_locator(ticker.MultipleLocator(0.5))
+                elif self.y_locator.get() == "FixedLocator":
+                    ax.yaxis.set_major_locator(ticker.FixedLocator([0, 1, 5]))
+                elif self.y_locator.get() == "LinearLocator":
+                    ax.yaxis.set_major_locator(ticker.LinearLocator(numticks=5))
+                elif self.y_locator.get() == "LogLocator":
+                    ax.yaxis.set_major_locator(ticker.LogLocator(base=10))
+                elif self.y_locator.get() == "MaxNLocator":
+                    ax.yaxis.set_major_locator(ticker.MaxNLocator(n=5))
+                elif self.y_locator.get() == "NullLocator":
+                    ax.yaxis.set_major_locator(ticker.NullLocator())
+            
+            # Apply tick formatters
+            if self.x_formatter.get() != "Auto":
+                if self.x_formatter.get() == "ScalarFormatter":
+                    ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
+                elif self.x_formatter.get() == "PercentFormatter":
+                    ax.xaxis.set_major_formatter(ticker.PercentFormatter(xmax=5))
+                elif self.x_formatter.get() == "StrMethodFormatter":
+                    ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x}'))
+                elif self.x_formatter.get() == "FuncFormatter":
+                    ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, p: f"[{x:.2f}]"))
+                elif self.x_formatter.get() == "FormatStrFormatter":
+                    ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.2f'))
+                elif self.x_formatter.get() == "NullFormatter":
+                    ax.xaxis.set_major_formatter(ticker.NullFormatter())
+            
+            if self.y_formatter.get() != "Auto":
+                if self.y_formatter.get() == "ScalarFormatter":
+                    ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
+                elif self.y_formatter.get() == "PercentFormatter":
+                    ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=5))
+                elif self.y_formatter.get() == "StrMethodFormatter":
+                    ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x}'))
+                elif self.y_formatter.get() == "FuncFormatter":
+                    ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, p: f"[{x:.2f}]"))
+                elif self.y_formatter.get() == "FormatStrFormatter":
+                    ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.2f'))
+                elif self.y_formatter.get() == "NullFormatter":
+                    ax.yaxis.set_major_formatter(ticker.NullFormatter())
+            
+            # Apply grid settings
+            ax.grid(self.show_grid.get(), which='major', 
+                   linestyle=self.grid_style.get(),
+                   alpha=float(self.grid_alpha.get()))
+            if self.show_minor_grid.get():
+                ax.grid(True, which='minor', 
+                       linestyle=self.grid_style.get(),
+                       alpha=float(self.grid_alpha.get()) * 0.5)
+            
+            # Rest of your plotting code remains the same
+            if plot_type == "Line Plot":
                 if color_var:
                     for category in self.filtered_data[color_var].unique():
                         mask = self.filtered_data[color_var] == category
-                        ax.plot(self.filtered_data[x_var][mask], self.filtered_data[y_var][mask], 
-                               label=category)
+                        ax.plot(self.filtered_data[x_var][mask], 
+                               self.filtered_data[y_var][mask],
+                               label=category,
+                               linestyle=plot_opts.get('linestyle', '-'),
+                               marker=plot_opts.get('marker', 'o'),
+                               linewidth=plot_opts.get('linewidth', 2),
+                               markerfacecolor='white',
+                               markeredgewidth=1.5)
                 else:
-                    ax.plot(self.filtered_data[x_var], self.filtered_data[y_var])
+                    ax.plot(self.filtered_data[x_var], 
+                           self.filtered_data[y_var],
+                           linestyle=plot_opts.get('linestyle', '-'),
+                           marker=plot_opts.get('marker', 'o'),
+                           linewidth=plot_opts.get('linewidth', 2),
+                           markerfacecolor='white',
+                           markeredgewidth=1.5)
                     
             elif plot_type == "Scatter Plot":
+                scatter_kwargs = {
+                    'marker': plot_opts.get('marker', 'o') if plot_opts.get('marker') != 'None' else 'o',
+                    'edgecolor': 'none',  # Changed from 'white' to 'none' to remove borders
+                    'linewidth': 1
+                }
+                
+                # Handle alpha parameter properly
+                try:
+                    alpha = float(plot_opts.get('alpha', 0.6))
+                    scatter_kwargs['alpha'] = alpha if alpha > 0 else None
+                except (ValueError, TypeError):
+                    scatter_kwargs['alpha'] = 0.6
+                
+                # Handle size parameter properly
+                try:
+                    size = float(plot_opts.get('size', 50))
+                    if size > 0:
+                        scatter_kwargs['s'] = size
+                except (ValueError, TypeError):
+                    scatter_kwargs['s'] = 50
+                
                 if color_var:
-                    scatter = ax.scatter(self.filtered_data[x_var], self.filtered_data[y_var],
-                                       c=self.filtered_data[color_var], cmap=self.color_scheme.get())
-                    self.fig.colorbar(scatter)
+                    # Handle categorical color variables
+                    if self.filtered_data[color_var].dtype == 'object' or pd.api.types.is_categorical_dtype(self.filtered_data[color_var]):
+                        # Get unique categories and map them to numbers
+                        categories = self.filtered_data[color_var].unique()
+                        color_map = {cat: i for i, cat in enumerate(categories)}
+                        c = [color_map[val] for val in self.filtered_data[color_var]]
+                        scatter = ax.scatter(self.filtered_data[x_var], 
+                                          self.filtered_data[y_var],
+                                          c=c,
+                                          cmap=self.color_scheme.get(),
+                                          **scatter_kwargs)
+                        
+                        # Create custom colorbar with category labels
+                        cbar = self.fig.colorbar(scatter, ax=ax)
+                        cbar.set_ticks(range(len(categories)))
+                        cbar.set_ticklabels(categories)
+                        cbar.set_label(color_var)
+                    else:
+                        # For numeric color variables, use them directly
+                        scatter = ax.scatter(self.filtered_data[x_var], 
+                                          self.filtered_data[y_var],
+                                          c=self.filtered_data[color_var],
+                                          cmap=self.color_scheme.get(),
+                                          **scatter_kwargs)
+                        self.fig.colorbar(scatter, label=color_var)
                 else:
-                    ax.scatter(self.filtered_data[x_var], self.filtered_data[y_var])
+                    ax.scatter(self.filtered_data[x_var], 
+                             self.filtered_data[y_var],
+                             **scatter_kwargs)
                     
             elif plot_type == "Bar Plot":
-                if color_var:
-                    self.filtered_data.groupby(x_var)[y_var].mean().plot(
-                        kind='bar', ax=ax, color=plt.cm.get_cmap(self.color_scheme.get())(
-                            np.linspace(0, 1, len(self.filtered_data[x_var].unique()))))
-                else:
-                    self.filtered_data.groupby(x_var)[y_var].mean().plot(kind='bar', ax=ax)
+                orientation = plot_opts.get('orientation', 'vertical')
+                # Convert width to float
+                width = float(plot_opts.get('width', 0.8))
+                
+                if orientation == 'vertical':
+                    if color_var:
+                        grouped = self.filtered_data.groupby([x_var, color_var])[y_var].mean().unstack()
+                        grouped.plot(kind='bar', 
+                                  ax=ax, 
+                                  width=width,
+                                  cmap=self.color_scheme.get())
+                    else:
+                        self.filtered_data.groupby(x_var)[y_var].mean().plot(
+                            kind='bar',
+                            ax=ax,
+                            color=plt.cm.get_cmap(self.color_scheme.get())(0.6),
+                            width=width)
+                else:  # horizontal
+                    if color_var:
+                        grouped = self.filtered_data.groupby([x_var, color_var])[y_var].mean().unstack()
+                        grouped.plot(kind='barh', 
+                                  ax=ax, 
+                                  height=width,  # Use height instead of width for horizontal bars
+                                  cmap=self.color_scheme.get())
+                    else:
+                        self.filtered_data.groupby(x_var)[y_var].mean().plot(
+                            kind='barh',
+                            ax=ax,
+                            color=plt.cm.get_cmap(self.color_scheme.get())(0.6),
+                            height=width)  # Use height instead of width for horizontal bars
                     
             elif plot_type == "Histogram":
-                ax.hist(self.filtered_data[x_var], bins=30, 
-                       color=plt.cm.get_cmap(self.color_scheme.get())(0.6))
+                if color_var:
+                    for category in self.filtered_data[color_var].unique():
+                        mask = self.filtered_data[color_var] == category
+                        ax.hist(self.filtered_data[x_var][mask],
+                               bins=int(plot_opts.get('bins', 30)),
+                               alpha=0.5,
+                               density=plot_opts.get('density', False),
+                               cumulative=plot_opts.get('cumulative', False),
+                               label=category,
+                               edgecolor='black')
+                else:
+                    ax.hist(self.filtered_data[x_var],
+                           bins=int(plot_opts.get('bins', 30)),
+                           density=plot_opts.get('density', False),
+                           cumulative=plot_opts.get('cumulative', False),
+                           color=plt.cm.get_cmap(self.color_scheme.get())(0.6),
+                           edgecolor='black')
 
             elif plot_type == "Box Plot":
-                if color_var:
-                    sns.boxplot(data=self.filtered_data, x=x_var, y=y_var, hue=color_var, ax=ax)
-                else:
-                    sns.boxplot(data=self.filtered_data, x=x_var, y=y_var, ax=ax)
+                try:
+                    width = float(plot_opts.get('width', 0.8))
+                    if width <= 0:
+                        width = 0.8
+                except (ValueError, TypeError):
+                    width = 0.8
+                
+                # Only pass hue if it has a value
+                plot_kwargs = {
+                    'data': self.filtered_data,
+                    'x': x_var,
+                    'y': y_var,
+                    'ax': ax,
+                    'width': width,
+                    'showfliers': plot_opts.get('showfliers', True),
+                    'notch': plot_opts.get('notch', False)
+                }
+                
+                if color_var:  # Only add hue and palette if color_var is set
+                    plot_kwargs['hue'] = color_var
+                    plot_kwargs['palette'] = self.color_scheme.get()
+                
+                sns.boxplot(**plot_kwargs)
                     
             elif plot_type == "Violin Plot":
-                if color_var:
-                    sns.violinplot(data=self.filtered_data, x=x_var, y=y_var, hue=color_var, ax=ax)
-                else:
-                    sns.violinplot(data=self.filtered_data, x=x_var, y=y_var, ax=ax)
-                    
-            elif plot_type == "Heatmap":
-                pivot_data = pd.pivot_table(
-                    self.filtered_data, values=y_var, index=x_var, 
-                    columns=color_var if color_var else None, aggfunc='mean'
-                )
-                sns.heatmap(pivot_data, ax=ax, cmap=self.color_scheme.get(), annot=True)
+                try:
+                    width = float(plot_opts.get('width', 0.8))
+                    if width <= 0:
+                        width = 0.8
+                except (ValueError, TypeError):
+                    width = 0.8
                 
-            elif plot_type == "Area Plot":
-                self.filtered_data.plot(x=x_var, y=y_var, kind='area', ax=ax,
-                             alpha=0.5, color=plt.cm.get_cmap(self.color_scheme.get())(0.6))
+                inner = plot_opts.get('inner')
+                if inner == 'None':
+                    inner = None
+                
+                # Only pass hue if it has a value
+                plot_kwargs = {
+                    'data': self.filtered_data,
+                    'x': x_var,
+                    'y': y_var,
+                    'ax': ax,
+                    'width': width,
+                    'inner': inner
+                }
+                
+                if color_var:  # Only add hue and palette if color_var is set
+                    plot_kwargs['hue'] = color_var
+                    plot_kwargs['palette'] = self.color_scheme.get()
+                
+                sns.violinplot(**plot_kwargs)
+
+            elif plot_type == "Heatmap":
+                if not (x_var and y_var):
+                    messagebox.showerror("Error", "Please select both X and Y variables!")
+                    return
+                
+                # Prepare data for heatmap
+                if color_var:
+                    # If color_var is specified, use it for values
+                    pivot_data = self.filtered_data.pivot_table(
+                        index=y_var, 
+                        columns=x_var, 
+                        values=color_var,
+                        aggfunc='mean'
+                    )
+                else:
+                    # If no color_var, create correlation matrix
+                    numeric_data = self.filtered_data[[x_var, y_var]].select_dtypes(include=[np.number])
+                    pivot_data = numeric_data.corr()
+                
+                # Get heatmap options
+                heatmap_kwargs = {
+                    'data': pivot_data,
+                    'ax': ax,
+                    'cmap': self.color_scheme.get(),
+                    'square': self.plot_specific_options['square'].get(),
+                    'linewidths': float(self.plot_specific_options['linewidths'].get()),
+                    'robust': self.plot_specific_options['robust'].get(),
+                    'annot': self.plot_specific_options['annot'].get(),
+                    'fmt': self.plot_specific_options['fmt'].get()
+                }
+                
+                # Add center if specified
+                center_val = self.plot_specific_options['center'].get()
+                if center_val:
+                    try:
+                        heatmap_kwargs['center'] = float(center_val)
+                    except ValueError:
+                        pass
+                
+                # Create heatmap
+                sns.heatmap(**heatmap_kwargs)
+                
+                # Rotate x-axis labels for better readability
+                plt.xticks(rotation=45, ha='right')
+                plt.yticks(rotation=0)
 
             elif plot_type == "Pie Chart":
-                self.filtered_data.groupby(x_var).size().plot(
-                    kind='pie', ax=ax, 
-                    colors=plt.cm.get_cmap(self.color_scheme.get())(
-                        np.linspace(0, 1, len(self.filtered_data[x_var].unique()))))
+                if not x_var:
+                    messagebox.showerror("Error", "Please select a value variable!")
+                    return
                 
-            elif plot_type == "Density Plot":
-                sns.kdeplot(data=self.filtered_data, x=x_var, hue=color_var, ax=ax)
+                # Prepare data for pie chart
+                if color_var:
+                    # Group data by color variable and calculate sum/mean of x_var
+                    pie_data = self.filtered_data.groupby(color_var)[x_var].sum()
+                    labels = pie_data.index
+                else:
+                    # Use value counts if no color variable
+                    pie_data = self.filtered_data[x_var].value_counts()
+                    labels = pie_data.index
+                
+                # Process explode values
+                try:
+                    explode_str = plot_opts.get('explode', '0.0')
+                    explode = [float(x.strip()) for x in explode_str.split(',')]
+                    # Pad with zeros if not enough values
+                    explode.extend([0.0] * (len(pie_data) - len(explode)))
+                    # Trim if too many values
+                    explode = explode[:len(pie_data)]
+                except (ValueError, AttributeError):
+                    explode = None
+                
+                # Get other pie chart options
+                pie_kwargs = {
+                    'labels': labels,
+                    'explode': explode,
+                    'autopct': '%1.1f%%' if plot_opts.get('autopct', True) else None,
+                    'shadow': plot_opts.get('shadow', False),
+                    'radius': float(plot_opts.get('radius', 1.0)),
+                    'startangle': float(plot_opts.get('startangle', 0))
+                }
+                
+                # Create pie chart
+                wedges, texts, autotexts = ax.pie(pie_data, **pie_kwargs)
+                
+                # Customize appearance
+                if pie_kwargs['autopct']:
+                    plt.setp(autotexts, size=8, weight="bold")
+                plt.setp(texts, size=10)
+                
+                # Equal aspect ratio ensures circular pie
+                ax.axis('equal')
 
-            # Set title and labels with enhanced styling
-            if self.plot_title.get():
-                ax.set_title(self.plot_title.get(), pad=20, fontweight='bold')
-            ax.set_xlabel(x_var, labelpad=10)
-            if y_var:
-                ax.set_ylabel(y_var, labelpad=10)
-                
-            # Enhanced legend styling
+            # Add legend with new options
             if color_var or plot_type in ["Line Plot", "Scatter Plot"]:
-                ax.legend(
-                    loc=self.legend_pos.get(),
-                    frameon=True,
-                    fancybox=True,
-                    framealpha=0.8,
-                    shadow=True
-                )
+                legend_kwargs = {
+                    'loc': self.legend_pos.get(),
+                    'frameon': self.legend_frame.get(),
+                    'title': self.legend_title.get() if self.legend_title.get() else None,
+                    'fontsize': int(self.font_size.get()) * 0.8
+                }
+                ax.legend(**legend_kwargs)
             
-            # Adjust layout and display
+            # Adjust layout
             self.fig.tight_layout()
             self.canvas.draw()
             
@@ -893,7 +1315,11 @@ class DataPlotterApp:
             self.current_fig = self.fig
 
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to create plot: {e}")
+            # Get detailed error information
+            import traceback
+            error_details = traceback.format_exc()
+            print(f"Error details:\n{error_details}")  # For debugging
+            messagebox.showerror("Error", f"Failed to create plot: {str(e)}\nPlease check your selections and try again.")
 
     def __del__(self):
         # Close all webview windows
@@ -1233,78 +1659,37 @@ class DataPlotterApp:
         options_frame = ttk.LabelFrame(self.plot_tab, text="Plot Configuration", padding=10)
         options_frame.pack(fill=tk.X, padx=10, pady=5)
         
+        # Create notebook for plot options
+        self.plot_options_notebook = ttk.Notebook(options_frame)
+        self.plot_options_notebook.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Base Options tab
+        self.base_options_tab = ttk.Frame(self.plot_options_notebook)
+        self.plot_options_notebook.add(self.base_options_tab, text="Base Options")
+        
         # Plot type selection
-        plot_type_frame = ttk.Frame(options_frame)
+        plot_type_frame = ttk.Frame(self.base_options_tab)
         plot_type_frame.pack(fill=tk.X, pady=5)
         
         ttk.Label(plot_type_frame, text="Plot Type:").pack(side=tk.LEFT, padx=5)
         self.plot_type = ttk.Combobox(
             plot_type_frame,
             values=[
+                # Basic plots
                 "Line Plot", "Scatter Plot", "Bar Plot", "Histogram",
                 "Box Plot", "Violin Plot", "Heatmap", "Area Plot",
-                "Pie Chart", "Density Plot", "3D Surface", "Contour Plot",
-                "Stream Plot", "Vector Field", "Bubble Plot", "Step Plot",
-                "Radar Chart", "Waterfall", "Candlestick", "Error Bars"
+                "Pie Chart", "Density Plot",
+                # Statistical plots
+                "Error Bar",
             ],
             state="readonly",
             width=30
         )
         self.plot_type.pack(side=tk.LEFT, padx=5)
-        self.plot_type.bind("<<ComboboxSelected>>", self.update_variable_selectors)
-        
-        # Plot title and labels with modern styling
-        title_frame = ttk.LabelFrame(options_frame, text="Plot Styling", padding=5)
-        title_frame.pack(fill=tk.X, pady=5)
-        
-        # Title
-        title_inner = ttk.Frame(title_frame)
-        title_inner.pack(fill=tk.X, pady=2)
-        ttk.Label(title_inner, text="Title:").pack(side=tk.LEFT, padx=5)
-        self.plot_title = ttk.Entry(title_inner, width=40)
-        self.plot_title.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
-        
-        # Font settings
-        font_frame = ttk.Frame(title_frame)
-        font_frame.pack(fill=tk.X, pady=2)
-        
-        ttk.Label(font_frame, text="Font:").pack(side=tk.LEFT, padx=5)
-        self.font_family = ttk.Combobox(
-            font_frame,
-            values=["Arial", "Times New Roman", "Helvetica", "Courier", "Verdana"],
-            width=15,
-            state="readonly"
-        )
-        self.font_family.set("Arial")
-        self.font_family.pack(side=tk.LEFT, padx=5)
-        
-        ttk.Label(font_frame, text="Size:").pack(side=tk.LEFT, padx=5)
-        self.font_size = ttk.Spinbox(font_frame, from_=8, to=24, width=5)
-        self.font_size.set(12)
-        self.font_size.pack(side=tk.LEFT, padx=5)
-        
-        # Grid and spines
-        grid_frame = ttk.Frame(title_frame)
-        grid_frame.pack(fill=tk.X, pady=2)
-        
-        self.show_grid = tk.BooleanVar(value=True)
-        ttk.Checkbutton(grid_frame, text="Show Grid", 
-                       variable=self.show_grid).pack(side=tk.LEFT, padx=5)
-        
-        self.show_spines = tk.BooleanVar(value=True)
-        ttk.Checkbutton(grid_frame, text="Show Spines",
-                       variable=self.show_spines).pack(side=tk.LEFT, padx=5)
-                       
-        # 3D Options (initially hidden)
-        self.plot_3d_frame = ttk.Frame(title_frame)
-        ttk.Label(self.plot_3d_frame, text="3D View:").pack(side=tk.LEFT, padx=5)
-        self.elevation = ttk.Scale(self.plot_3d_frame, from_=0, to=90, orient=tk.HORIZONTAL)
-        self.elevation.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
-        self.azimuth = ttk.Scale(self.plot_3d_frame, from_=0, to=360, orient=tk.HORIZONTAL)
-        self.azimuth.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+        self.plot_type.bind("<<ComboboxSelected>>", self.update_plot_options)
         
         # Variables frame
-        vars_frame = ttk.Frame(options_frame)
+        vars_frame = ttk.Frame(self.base_options_tab)
         vars_frame.pack(fill=tk.X, pady=5)
         
         # X Variable
@@ -1321,29 +1706,41 @@ class DataPlotterApp:
         ttk.Label(vars_frame, text="Color:").pack(side=tk.LEFT, padx=5)
         self.color_var = ttk.Combobox(vars_frame, state="disabled", width=20)
         self.color_var.pack(side=tk.LEFT, padx=5)
+
+        # Plot-specific options frame
+        self.plot_specific_frame = ttk.LabelFrame(self.base_options_tab, text="Plot Options", padding=5)
+        self.plot_specific_frame.pack(fill=tk.X, pady=5)
         
-        # Style options frame
-        style_frame = ttk.LabelFrame(self.plot_tab, text="Style Options", padding=10)
-        style_frame.pack(fill=tk.X, padx=10, pady=5)
+        # Style & Font tab (merged)
+        style_tab = ttk.Frame(self.plot_options_notebook)
+        self.plot_options_notebook.add(style_tab, text="Style & Font")
+        
+        # Create a notebook for style sub-options
+        style_notebook = ttk.Notebook(style_tab)
+        style_notebook.pack(fill=tk.BOTH, expand=True)
+        
+        # Basic Style tab
+        basic_style = ttk.Frame(style_notebook)
+        style_notebook.add(basic_style, text="Basic")
         
         # Color scheme
-        ttk.Label(style_frame, text="Color Scheme:").pack(side=tk.LEFT, padx=5)
+        ttk.Label(basic_style, text="Color Scheme:").pack(anchor=tk.W, padx=5, pady=2)
         self.color_scheme = ttk.Combobox(
-            style_frame,
+            basic_style,
             values=[
                 "viridis", "plasma", "inferno", "magma", "cividis",
-                "Set1", "Set2", "Set3", "Paired", "husl"
+                "Spectral", "RdYlBu", "coolwarm", "bwr", "seismic"
             ],
             state="readonly",
             width=20
         )
         self.color_scheme.set("viridis")
-        self.color_scheme.pack(side=tk.LEFT, padx=5)
+        self.color_scheme.pack(anchor=tk.W, padx=5, pady=2)
         
-        # Style
-        ttk.Label(style_frame, text="Style:").pack(side=tk.LEFT, padx=5)
+        # Plot style
+        ttk.Label(basic_style, text="Plot Style:").pack(anchor=tk.W, padx=5, pady=2)
         self.plot_style = ttk.Combobox(
-            style_frame,
+            basic_style,
             values=[
                 "default", "seaborn-v0_8", "seaborn-v0_8-darkgrid", 
                 "seaborn-v0_8-whitegrid", "bmh", "classic", "dark_background",
@@ -1353,18 +1750,192 @@ class DataPlotterApp:
             width=20
         )
         self.plot_style.set("default")
-        self.plot_style.pack(side=tk.LEFT, padx=5)
+        self.plot_style.pack(anchor=tk.W, padx=5, pady=2)
+        
+        # Font settings
+        ttk.Label(basic_style, text="Font Family:").pack(anchor=tk.W, padx=5, pady=2)
+        self.font_family = ttk.Combobox(
+            basic_style,
+            values=["Arial", "Times New Roman", "Helvetica", "Courier", "Verdana"],
+            width=20,
+            state="readonly"
+        )
+        self.font_family.set("Arial")
+        self.font_family.pack(anchor=tk.W, padx=5, pady=2)
+        
+        ttk.Label(basic_style, text="Font Size:").pack(anchor=tk.W, padx=5, pady=2)
+        self.font_size = ttk.Spinbox(basic_style, from_=8, to=24, width=10)
+        self.font_size.set(12)
+        self.font_size.pack(anchor=tk.W, padx=5, pady=2)
+        
+        # Ticks & Labels tab
+        ticks_tab = ttk.Frame(style_notebook)
+        style_notebook.add(ticks_tab, text="Ticks & Labels")
+        
+        # X-axis settings
+        x_frame = ttk.LabelFrame(ticks_tab, text="X-Axis")
+        x_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        # X-axis label
+        ttk.Label(x_frame, text="Label:").pack(side=tk.LEFT, padx=5)
+        self.x_label = ttk.Entry(x_frame, width=20)
+        self.x_label.pack(side=tk.LEFT, padx=5)
+        
+        # X-axis limits
+        ttk.Label(x_frame, text="Limits:").pack(side=tk.LEFT, padx=5)
+        self.x_min = ttk.Entry(x_frame, width=8)
+        self.x_min.pack(side=tk.LEFT, padx=2)
+        ttk.Label(x_frame, text="to").pack(side=tk.LEFT)
+        self.x_max = ttk.Entry(x_frame, width=8)
+        self.x_max.pack(side=tk.LEFT, padx=2)
+        
+        # X-axis tick settings
+        x_tick_frame = ttk.Frame(x_frame)
+        x_tick_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Label(x_tick_frame, text="Tick Locator:").pack(side=tk.LEFT, padx=5)
+        self.x_locator = ttk.Combobox(
+            x_tick_frame,
+            values=[
+                "Auto", "MultipleLocator", "FixedLocator", "LinearLocator",
+                "LogLocator", "MaxNLocator", "NullLocator"
+            ],
+            state="readonly",
+            width=15
+        )
+        self.x_locator.set("Auto")
+        self.x_locator.pack(side=tk.LEFT, padx=5)
+        
+        ttk.Label(x_tick_frame, text="Formatter:").pack(side=tk.LEFT, padx=5)
+        self.x_formatter = ttk.Combobox(
+            x_tick_frame,
+            values=[
+                "Auto", "ScalarFormatter", "PercentFormatter", "StrMethodFormatter",
+                "FuncFormatter", "FormatStrFormatter", "NullFormatter"
+            ],
+            state="readonly",
+            width=15
+        )
+        self.x_formatter.set("Auto")
+        self.x_formatter.pack(side=tk.LEFT, padx=5)
+        
+        # Y-axis settings (similar to X-axis)
+        y_frame = ttk.LabelFrame(ticks_tab, text="Y-Axis")
+        y_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        ttk.Label(y_frame, text="Label:").pack(side=tk.LEFT, padx=5)
+        self.y_label = ttk.Entry(y_frame, width=20)
+        self.y_label.pack(side=tk.LEFT, padx=5)
+        
+        ttk.Label(y_frame, text="Limits:").pack(side=tk.LEFT, padx=5)
+        self.y_min = ttk.Entry(y_frame, width=8)
+        self.y_min.pack(side=tk.LEFT, padx=2)
+        ttk.Label(y_frame, text="to").pack(side=tk.LEFT)
+        self.y_max = ttk.Entry(y_frame, width=8)
+        self.y_max.pack(side=tk.LEFT, padx=2)
+        
+        y_tick_frame = ttk.Frame(y_frame)
+        y_tick_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Label(y_tick_frame, text="Tick Locator:").pack(side=tk.LEFT, padx=5)
+        self.y_locator = ttk.Combobox(
+            y_tick_frame,
+            values=[
+                "Auto", "MultipleLocator", "FixedLocator", "LinearLocator",
+                "LogLocator", "MaxNLocator", "NullLocator"
+            ],
+            state="readonly",
+            width=15
+        )
+        self.y_locator.set("Auto")
+        self.y_locator.pack(side=tk.LEFT, padx=5)
+        
+        ttk.Label(y_tick_frame, text="Formatter:").pack(side=tk.LEFT, padx=5)
+        self.y_formatter = ttk.Combobox(
+            y_tick_frame,
+            values=[
+                "Auto", "ScalarFormatter", "PercentFormatter", "StrMethodFormatter",
+                "FuncFormatter", "FormatStrFormatter", "NullFormatter"
+            ],
+            state="readonly",
+            width=15
+        )
+        self.y_formatter.set("Auto")
+        self.y_formatter.pack(side=tk.LEFT, padx=5)
+        
+        # Legend & Title tab
+        legend_tab = ttk.Frame(style_notebook)
+        style_notebook.add(legend_tab, text="Legend & Title")
+        
+        # Title settings
+        title_frame = ttk.LabelFrame(legend_tab, text="Title")
+        title_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        ttk.Label(title_frame, text="Title:").pack(side=tk.LEFT, padx=5)
+        self.plot_title = ttk.Entry(title_frame, width=30)
+        self.plot_title.pack(side=tk.LEFT, padx=5)
+        
+        ttk.Label(title_frame, text="Pad:").pack(side=tk.LEFT, padx=5)
+        self.title_pad = ttk.Spinbox(title_frame, from_=0, to=50, width=5)
+        self.title_pad.set(10)
+        self.title_pad.pack(side=tk.LEFT, padx=5)
+        
+        # Legend settings
+        legend_frame = ttk.LabelFrame(legend_tab, text="Legend")
+        legend_frame.pack(fill=tk.X, padx=5, pady=5)
         
         # Legend position
-        ttk.Label(style_frame, text="Legend:").pack(side=tk.LEFT, padx=5)
+        ttk.Label(legend_frame, text="Position:").pack(side=tk.LEFT, padx=5)
         self.legend_pos = ttk.Combobox(
-            style_frame,
-            values=["best", "upper right", "upper left", "lower right", "lower left"],
+            legend_frame,
+            values=["best", "upper right", "upper left", "lower right", "lower left",
+                   "center left", "center right", "lower center", "upper center", "center"],
             state="readonly",
-            width=20
+            width=15
         )
         self.legend_pos.set("best")
         self.legend_pos.pack(side=tk.LEFT, padx=5)
+        
+        # Legend title
+        ttk.Label(legend_frame, text="Title:").pack(side=tk.LEFT, padx=5)
+        self.legend_title = ttk.Entry(legend_frame, width=20)
+        self.legend_title.pack(side=tk.LEFT, padx=5)
+        
+        # Legend frame
+        self.legend_frame = tk.BooleanVar(value=True)
+        ttk.Checkbutton(legend_frame, text="Show Frame", 
+                       variable=self.legend_frame).pack(side=tk.LEFT, padx=5)
+        
+        # Grid tab
+        grid_tab = ttk.Frame(self.plot_options_notebook)
+        self.plot_options_notebook.add(grid_tab, text="Grid")
+        
+        # Major grid
+        self.show_grid = tk.BooleanVar(value=True)
+        ttk.Checkbutton(grid_tab, text="Show Major Grid", 
+                       variable=self.show_grid).pack(anchor=tk.W, padx=5, pady=2)
+        
+        # Minor grid
+        self.show_minor_grid = tk.BooleanVar(value=False)
+        ttk.Checkbutton(grid_tab, text="Show Minor Grid", 
+                       variable=self.show_minor_grid).pack(anchor=tk.W, padx=5, pady=2)
+        
+        # Grid style
+        ttk.Label(grid_tab, text="Grid Style:").pack(anchor=tk.W, padx=5, pady=2)
+        self.grid_style = ttk.Combobox(
+            grid_tab,
+            values=["-", "--", "-.", ":"],
+            state="readonly",
+            width=10
+        )
+        self.grid_style.set("-")
+        self.grid_style.pack(anchor=tk.W, padx=5, pady=2)
+        
+        # Grid alpha
+        ttk.Label(grid_tab, text="Grid Alpha:").pack(anchor=tk.W, padx=5, pady=2)
+        self.grid_alpha = ttk.Spinbox(grid_tab, from_=0, to=1, increment=0.1, width=5)
+        self.grid_alpha.set(0.5)
+        self.grid_alpha.pack(anchor=tk.W, padx=5, pady=2)
         
         # Buttons frame
         button_frame = ttk.Frame(self.plot_tab)
@@ -1393,6 +1964,9 @@ class DataPlotterApp:
         # Add matplotlib toolbar
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.plot_frame)
         self.toolbar.update()
+        
+        # Initialize plot-specific options dictionary
+        self.plot_specific_options = {}
 
     def setup_stats_view(self):
         # Statistics controls
@@ -2468,28 +3042,283 @@ class DataPlotterApp:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to connect to database: {str(e)}")
 
+    def update_plot_options(self, event=None):
+        """Update plot options based on selected plot type."""
+        plot_type = self.plot_type.get()
+        all_columns = self.data.columns.tolist() if self.data is not None else []
+
+        # Reset all selectors
+        for selector in [self.x_var, self.y_var, self.color_var]:
+            selector.set("")
+            selector["state"] = "disabled"
+
+        # Clear existing plot-specific options
+        for widget in self.plot_specific_frame.winfo_children():
+            widget.destroy()
+
+        # Initialize plot_specific_options if it doesn't exist
+        if not hasattr(self, 'plot_specific_options'):
+            self.plot_specific_options = {}
+
+        # Update variable selectors based on plot type
+        if plot_type == "Line Plot":
+            self.x_var["values"] = ["None"] + self.continuous_columns + self.datetime_columns
+            self.y_var["values"] = ["None"] + self.continuous_columns
+            self.color_var["values"] = ["None"] + self.categorical_columns
+            for selector in [self.x_var, self.y_var, self.color_var]:
+                selector["state"] = "readonly"
+            
+            # Add line plot specific options
+            line_opts = ttk.Frame(self.plot_specific_frame)
+            line_opts.pack(fill=tk.X, pady=5)
+            
+            # Line style
+            ttk.Label(line_opts, text="Line Style:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['linestyle'] = ttk.Combobox(
+                line_opts, values=['None', '-', '--', '-.', ':'], state="readonly", width=10)
+            self.plot_specific_options['linestyle'].set('-')
+            self.plot_specific_options['linestyle'].pack(side=tk.LEFT, padx=5)
+            
+            # Marker
+            ttk.Label(line_opts, text="Marker:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['marker'] = ttk.Combobox(
+                line_opts, values=['None', 'o', 's', '^', 'v', 'D', '*', '+', 'x'], 
+                state="readonly", width=10)
+            self.plot_specific_options['marker'].set('o')
+            self.plot_specific_options['marker'].pack(side=tk.LEFT, padx=5)
+            
+            # Line width
+            ttk.Label(line_opts, text="Line Width:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['linewidth'] = ttk.Spinbox(
+                line_opts, from_=0, to=10, increment=0.5, width=5)
+            self.plot_specific_options['linewidth'].set(2)
+            self.plot_specific_options['linewidth'].pack(side=tk.LEFT, padx=5)
+
+        elif plot_type == "Scatter Plot":
+            self.x_var["values"] = ["None"] + self.continuous_columns
+            self.y_var["values"] = ["None"] + self.continuous_columns
+            self.color_var["values"] = ["None"] + all_columns
+            for selector in [self.x_var, self.y_var, self.color_var]:
+                selector["state"] = "readonly"
+            
+            # Add scatter plot specific options
+            scatter_opts = ttk.Frame(self.plot_specific_frame)
+            scatter_opts.pack(fill=tk.X, pady=5)
+            
+            # Marker
+            ttk.Label(scatter_opts, text="Marker:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['marker'] = ttk.Combobox(
+                scatter_opts, values=['None', 'o', 's', '^', 'v', 'D', '*', '+', 'x'], 
+                state="readonly", width=10)
+            self.plot_specific_options['marker'].set('o')
+            self.plot_specific_options['marker'].pack(side=tk.LEFT, padx=5)
+            
+            # Size
+            ttk.Label(scatter_opts, text="Size:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['size'] = ttk.Spinbox(
+                scatter_opts, from_=0, to=200, increment=10, width=5)
+            self.plot_specific_options['size'].set(50)
+            self.plot_specific_options['size'].pack(side=tk.LEFT, padx=5)
+            
+            # Alpha
+            ttk.Label(scatter_opts, text="Transparency:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['alpha'] = ttk.Spinbox(
+                scatter_opts, from_=0, to=1.0, increment=0.1, width=5)
+            self.plot_specific_options['alpha'].set(0.6)
+            self.plot_specific_options['alpha'].pack(side=tk.LEFT, padx=5)
+
+        elif plot_type == "Bar Plot":
+            self.x_var["values"] = ["None"] + self.categorical_columns
+            self.y_var["values"] = ["None"] + self.continuous_columns
+            self.color_var["values"] = ["None"] + self.categorical_columns
+            for selector in [self.x_var, self.y_var, self.color_var]:
+                selector["state"] = "readonly"
+            
+            # Add bar plot specific options
+            bar_opts = ttk.Frame(self.plot_specific_frame)
+            bar_opts.pack(fill=tk.X, pady=5)
+            
+            # Bar width
+            ttk.Label(bar_opts, text="Bar Width:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['width'] = ttk.Spinbox(
+                bar_opts, from_=0, to=1.0, increment=0.1, width=5)
+            self.plot_specific_options['width'].set(0.8)
+            self.plot_specific_options['width'].pack(side=tk.LEFT, padx=5)
+            
+            # Bar orientation
+            ttk.Label(bar_opts, text="Orientation:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['orientation'] = ttk.Combobox(
+                bar_opts, values=['None', 'vertical', 'horizontal'], state="readonly", width=10)
+            self.plot_specific_options['orientation'].set('vertical')
+            self.plot_specific_options['orientation'].pack(side=tk.LEFT, padx=5)
+
+        elif plot_type == "Histogram":
+            self.x_var["values"] = ["None"] + self.continuous_columns
+            self.x_var["state"] = "readonly"
+            self.color_var["values"] = ["None"] + self.categorical_columns
+            self.color_var["state"] = "readonly"
+            
+            # Add histogram specific options
+            hist_opts = ttk.Frame(self.plot_specific_frame)
+            hist_opts.pack(fill=tk.X, pady=5)
+            
+            # Number of bins
+            ttk.Label(hist_opts, text="Bins:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['bins'] = ttk.Spinbox(
+                hist_opts, from_=0, to=100, increment=5, width=5)
+            self.plot_specific_options['bins'].set(30)
+            self.plot_specific_options['bins'].pack(side=tk.LEFT, padx=5)
+            
+            # Density
+            self.plot_specific_options['density'] = tk.BooleanVar(value=False)
+            ttk.Checkbutton(hist_opts, text="Normalize", 
+                          variable=self.plot_specific_options['density']).pack(side=tk.LEFT, padx=5)
+            
+            # Cumulative
+            self.plot_specific_options['cumulative'] = tk.BooleanVar(value=False)
+            ttk.Checkbutton(hist_opts, text="Cumulative", 
+                          variable=self.plot_specific_options['cumulative']).pack(side=tk.LEFT, padx=5)
+
+        elif plot_type in ["Box Plot", "Violin Plot"]:
+            self.x_var["values"] = self.categorical_columns
+            self.y_var["values"] = self.continuous_columns
+            self.color_var["values"] = self.categorical_columns
+            for selector in [self.x_var, self.y_var, self.color_var]:
+                selector["state"] = "readonly"
+            
+            # Add box/violin plot specific options
+            box_opts = ttk.Frame(self.plot_specific_frame)
+            box_opts.pack(fill=tk.X, pady=5)
+            
+            # Width
+            ttk.Label(box_opts, text="Width:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['width'] = ttk.Spinbox(
+                box_opts, from_=0, to=1.0, increment=0.1, width=5)
+            self.plot_specific_options['width'].set(0.8)
+            self.plot_specific_options['width'].pack(side=tk.LEFT, padx=5)
+            
+            if plot_type == "Box Plot":
+                # Show outliers
+                self.plot_specific_options['showfliers'] = tk.BooleanVar(value=True)
+                ttk.Checkbutton(box_opts, text="Show Outliers", 
+                              variable=self.plot_specific_options['showfliers']).pack(side=tk.LEFT, padx=5)
+                
+                # Notch
+                self.plot_specific_options['notch'] = tk.BooleanVar(value=False)
+                ttk.Checkbutton(box_opts, text="Show Notch", 
+                              variable=self.plot_specific_options['notch']).pack(side=tk.LEFT, padx=5)
+            else:  # Violin Plot
+                # Show inner points
+                ttk.Label(box_opts, text="Inner:").pack(side=tk.LEFT, padx=5)
+                self.plot_specific_options['inner'] = ttk.Combobox(
+                    box_opts, values=['None', 'box', 'stick', 'point'], 
+                    state="readonly", width=10)
+                self.plot_specific_options['inner'].set('box')
+                self.plot_specific_options['inner'].pack(side=tk.LEFT, padx=5)
+
+        elif plot_type == "Heatmap":
+            self.x_var["values"] = ["None"] + all_columns
+            self.y_var["values"] = ["None"] + all_columns
+            self.color_var["values"] = ["None"] + self.continuous_columns
+            for selector in [self.x_var, self.y_var, self.color_var]:
+                selector["state"] = "readonly"
+            
+            # Add heatmap specific options
+            heatmap_opts = ttk.Frame(self.plot_specific_frame)
+            heatmap_opts.pack(fill=tk.X, pady=5)
+            
+            # Annotations
+            self.plot_specific_options['annot'] = tk.BooleanVar(value=True)
+            ttk.Checkbutton(heatmap_opts, text="Show Values", 
+                          variable=self.plot_specific_options['annot']).pack(side=tk.LEFT, padx=5)
+            
+            # Format string for annotations
+            ttk.Label(heatmap_opts, text="Format:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['fmt'] = ttk.Entry(heatmap_opts, width=8)
+            self.plot_specific_options['fmt'].insert(0, '.2g')
+            self.plot_specific_options['fmt'].pack(side=tk.LEFT, padx=5)
+            
+            # Center value
+            ttk.Label(heatmap_opts, text="Center:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['center'] = ttk.Entry(heatmap_opts, width=8)
+            self.plot_specific_options['center'].pack(side=tk.LEFT, padx=5)
+            
+            # Square cells
+            self.plot_specific_options['square'] = tk.BooleanVar(value=True)
+            ttk.Checkbutton(heatmap_opts, text="Square Cells", 
+                          variable=self.plot_specific_options['square']).pack(side=tk.LEFT, padx=5)
+            
+            # Line widths
+            ttk.Label(heatmap_opts, text="Line Width:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['linewidths'] = ttk.Spinbox(
+                heatmap_opts, from_=0, to=2, increment=0.1, width=5)
+            self.plot_specific_options['linewidths'].set(0.5)
+            self.plot_specific_options['linewidths'].pack(side=tk.LEFT, padx=5)
+            
+            # Robust scaling
+            self.plot_specific_options['robust'] = tk.BooleanVar(value=False)
+            ttk.Checkbutton(heatmap_opts, text="Robust Scaling", 
+                          variable=self.plot_specific_options['robust']).pack(side=tk.LEFT, padx=5)
+
+        elif plot_type == "Density Plot":
+            self.x_var["values"] = ["None"] + self.continuous_columns
+            self.x_var["state"] = "readonly"
+            self.color_var["values"] = ["None"] + self.categorical_columns
+            self.color_var["state"] = "readonly"
+            self.y_var["state"] = "disabled"
+            
+            # Add density plot specific options
+            density_opts = ttk.Frame(self.plot_specific_frame)
+            density_opts.pack(fill=tk.X, pady=5)
+            
+            # Bandwidth adjustment
+            ttk.Label(density_opts, text="Bandwidth Factor:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['bw_factor'] = ttk.Spinbox(
+                density_opts, from_=0.1, to=2.0, increment=0.05, width=5)
+            self.plot_specific_options['bw_factor'].set(0.25)
+            self.plot_specific_options['bw_factor'].pack(side=tk.LEFT, padx=5)
+            
+            # Fill
+            self.plot_specific_options['fill'] = tk.BooleanVar(value=True)
+            ttk.Checkbutton(density_opts, text="Fill", 
+                          variable=self.plot_specific_options['fill']).pack(side=tk.LEFT, padx=5)
+            
+            # Alpha (transparency)
+            ttk.Label(density_opts, text="Transparency:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['alpha'] = ttk.Spinbox(
+                density_opts, from_=0.0, to=1.0, increment=0.1, width=5)
+            self.plot_specific_options['alpha'].set(0.4)
+            self.plot_specific_options['alpha'].pack(side=tk.LEFT, padx=5)
+            
+            # Number of points
+            ttk.Label(density_opts, text="Points:").pack(side=tk.LEFT, padx=5)
+            self.plot_specific_options['points'] = ttk.Spinbox(
+                density_opts, from_=50, to=500, increment=50, width=5)
+            self.plot_specific_options['points'].set(200)
+            self.plot_specific_options['points'].pack(side=tk.LEFT, padx=5)
+
 if __name__ == "__main__":
     root = tk.Tk()
     # Set icon from assets directory
     icon_path = os.path.join(os.path.dirname(__file__), "assets", "logo.ico")
     png_path = os.path.join(os.path.dirname(__file__), "assets", "logo.png")
     
-    if os.path.exists(icon_path):
-        # Set window icon
-        root.iconbitmap(icon_path)
-        # Set taskbar icon (Windows specific)
-        try:
-            import ctypes
-            myappid = 'csvue.1.0' # arbitrary string
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+    # Windows-specific taskbar icon setup
+    try:
+        import ctypes
+        myappid = 'company.csvue.1.0'  # arbitrary string
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+        if os.path.exists(icon_path):
             root.iconbitmap(default=icon_path)
-        except:
-            pass  # Not on Windows or other error
+    except Exception:
+        pass  # Not on Windows or other error
     
-    # Alternative method using PhotoImage
-    if os.path.exists(png_path):
+    # Set window icon - try ICO first, then PNG as fallback
+    if os.path.exists(icon_path):
+        root.iconbitmap(icon_path)
+    elif os.path.exists(png_path):
         icon_image = tk.PhotoImage(file=png_path)
         root.iconphoto(True, icon_image)
-        
+    
     plotter = DataPlotterApp(root)
     root.mainloop()
