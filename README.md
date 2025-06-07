@@ -1,6 +1,6 @@
 ![logo](https://github.com/user-attachments/assets/73a6a479-da06-4fe9-be14-0aadfd91a331)
 
-CSVUE is a desktop application built with Python and Tkinter for loading, browsing, analyzing, and visualizing tabular data from various file formats. CSVUE streamlines exploratory data analysis (EDA) with an intuitive GUI and rich plotting capabilities.
+CSVUE is a desktop application built with Python and Tkinter for loading, browsing, analyzing, and visualizing tabular data from various file formats.
 
 # Key Features
 
